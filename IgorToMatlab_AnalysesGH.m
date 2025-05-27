@@ -1,3 +1,5 @@
+%% This script takes .ibw files from igor and makes it readable for matlab.
+
 %% Add the .ibw extension to the file missing it
 
 TraceList = dir('exp_*');
@@ -10,7 +12,7 @@ for FieldToCheck=1:length(TraceList)
     end 
 end 
 
-%% Find the trace number Depo
+%% Extract the file traces with the name depo in it, to get traces from 0 to +500pA and sort it
 
 %clear;clc;
 
@@ -24,6 +26,8 @@ for fieldsDepo=1:length(TraceListCCstepDepo)
     TraceNumberDepo=sort(TraceNumberDepo);
 end 
 
+%% Extract the traces with the name hyperpo in it, to get traces from -200pA to 0pA
+
 TraceNumberHyperpo=[];
 TraceListCCstepHyperpo = dir('exp_CCstepHyperpo_ch4*');
 for fieldsHyperpo=1:length(TraceListCCstepHyperpo)
@@ -34,6 +38,7 @@ for fieldsHyperpo=1:length(TraceListCCstepHyperpo)
     TraceNumberHyperpo=sort(TraceNumberHyperpo);
 end 
 
+%% Extract the traces with the name APThreshold
 
 TraceNumberAPThreshold=[];
 TraceListAPThreshold = dir('exp_APThreshold_ch4*');
@@ -58,7 +63,7 @@ iy=0;iz=0;ia=0;ib=0;ic=0;id=0;ie=0;ig=0; nm=0;
 %Enter trace number of depo
 warning ('off','all');
 
-
+% If threshold for peak detection is below 0pA, specify it here
 prompt="Do you want to Lower peak detection threshold Y/N [Y]:";
 txt = input(prompt,"s");
 if txt=='Y' | txt=='y'
@@ -68,6 +73,7 @@ else
     MinPeakHeight=0;
 end 
 
+% if some traces are not to be used, specify it here 
 prompt="Do you want to use specific traces for CC step DEPO Y/N [Y]:";
 txt = input(prompt,"s");
 if txt=='Y' | txt=='y'
@@ -87,9 +93,11 @@ else
     for  T=1:length(TraceNumberDepo)
       trace=[];
       trace=TraceNumberDepo(1,T); 
-      IgorToMatlabCCstepdepo
+      IgorToMatlabCCstepdepo  %this function can be found on the github repository
     end
 end 
+
+%For current from 0 to 500pA following steps will perform the mean of firing frequency for each current steps and give the MeanFreq_ACSF file
 
 currents = 0:25:500;
 MeanFreq_ACSF = zeros(length(currents), 1);
@@ -109,7 +117,7 @@ save(filename,'MeanFreq_ACSF')
 %save('workspaceACSF')
 
 
-% Find Reobase
+% Find Reobase, find the first of current steps where the cell fires
 kj=1;
 if sum(nbrAP(:,3))>0
   while (nbrAP(kj,3))==0
@@ -120,12 +128,13 @@ else
   RheoBase=NaN; 
 end
 end  
-%% CC step hyperpo 
+
+%% CC step hyperpo, takes only the steps from 0 to 250pA
 
 if ~isempty(TraceListCCstepDepo)
 if isempty(TraceListCCstepHyperpo) 
     %if exist('HyperpoMinus20pA') 
- NS= size(HyperpoMinus20pA);
+ NS= size(HyperpoMinus20pA); % take only the steps of current of -20pA and do the mean
  NbrofSteps=NS(1);
    if NbrofSteps>1 
    MeanHyperpoMinus20pA=mean(HyperpoMinus20pA(:,:));
@@ -143,8 +152,10 @@ if txt=='Y' | txt=='y'
     tracestart=input(prompt);
     prompt="which traces do you want to end with ?";
     tracestop=input(prompt);
-for trace= tracestart:tracestop
     
+for trace= tracestart:tracestop
+
+ % transform the igor file into a matlab matrix 
     filename=['exp_CCstepHyperpo_ch10_',num2str(trace),'.ibw'];
    D = IBWread(filename);
    AllTracesHyperpoCH10(trace,:)=(D.y)';
@@ -153,7 +164,7 @@ for trace= tracestart:tracestop
    D = IBWread(filename);
    AllTracesHyperpoCH4(trace,:)=(D.y)'; %only taking the rec from 0.2 to 1.2 sec 
    
-   
+   %Keep only traces which are current clamped at -20pA
    if ClampedCurrentHyperpo(trace,1)<-15 && ClampedCurrentHyperpo(trace,1)>-25
        nm=nm+1;
        HyperpoMinus20pA(nm,:) = AllTracesHyperpoCH4(trace,:);
@@ -164,7 +175,7 @@ for trace= tracestart:tracestop
 end 
 else
     
-  
+   % transform the igor file into a matlab matrix 
    for T=1:length(TraceNumberHyperpo)
    trace=[];
    trace=TraceNumberHyperpo(1,T);
@@ -174,7 +185,7 @@ else
    ClampedCurrentHyperpo(trace,1)=((mean( AllTracesHyperpoCH10(trace,20000:50000)))-(mean(AllTracesHyperpoCH10(trace,1:9990))))*10^12; % to have it in pA
    filename=['exp_CCstepHyperpo_ch4_',num2str(trace),'.ibw'];
    D = IBWread(filename);
-   AllTracesHyperpoCH4(trace,:)=(D.y)'; %only taking the rec from 0.2 to 1.2 sec 
+   AllTracesHyperpoCH4(trace,:)=(D.y)'; %only taking the rec from 0.2 to 1.2 sec, when the hyperpolaizing current is given
    
    
    if ClampedCurrentHyperpo(trace,1)<-15 && ClampedCurrentHyperpo(trace,1)>-25
@@ -189,7 +200,7 @@ end
 end
 %end 
 
- IgortoMatlabCCstepHyperpo
+ IgortoMatlabCCstepHyperpo % this function can be found on the github repository
  if exist('HyperpoMinus20pA')
  save('CellIntrinsicProperties','RestingMembranePot', 'DeltaMP','InputResistance','Tauinms','Capacitance','RheoBase','Width1stPeak','MeanWidthAllPeaks','Amp1stPeak','MeanAmpAllPeaks')
  %save('workspace')
@@ -198,7 +209,7 @@ end
  savefig(figure(2),'Fig exponential fitting')
  
 
-%% Timing Prop
+%% Timing Prop, will extract the timing properties of each action potentials
  
 if ~exist('TraceNumberDepo') 
     TraceNumberDepo=TraceNumber; 
@@ -213,10 +224,10 @@ if exist('tracestart')
    end 
 end
   
-TraceNumberDepo=sort(TraceNumberDepo);   %This paragraph doesn't exist in other scripts, let's check if it's really necessary
+TraceNumberDepo=sort(TraceNumberDepo);  %to sort traces in numerical order 1,2,3 instead of 1,10,100
 
-if TraceNumberDepo(1,1) == (TraceNumberDepo(1,2) - 1)
-    disp('CCstep depo 1 does not exist we are good to continue');
+if TraceNumberDepo(1,1) == (TraceNumberDepo(1,2) - 1) % this paragraph was added to remove the first unecessary trace in some of the aquisition files
+    disp('CCstep depo 1 does not exist we are good to continue'); 
 else 
     TraceNumberDepo(1, 1:end-1) = TraceNumberDepo(1, 2:end);
     TraceNumberDepo(:, end) = [];
@@ -227,16 +238,16 @@ for  T=1:length(TraceNumberDepo)
             trace=[];
       trace=TraceNumberDepo(1,T); 
       %filename=['exp_CCstepDepo_ch4_',num2str(trace),'.ibw'];
-       TracePoints(T,:)=FullTraceCH4(trace,[10100:59900]); %to avoid peaks before or after the CC step 
-       Derivative(T,:)= diff(TracePoints(T,:));
+       TracePoints(T,:)=FullTraceCH4(trace,[10100:59900]); %to avoid peaks before or after the CC step, only take part of the trace where current is given
+       Derivative(T,:)= diff(TracePoints(T,:)); %take the derivative of the trace
        y=TracePoints(T,:);
-     % Settings
+     % Settings for the upcoming Thresholding function
       lag = 30;
       threshold = 4;
       influence = 0.5;
       x1=[1:length(TracePoints)];
  
-      [signals,avg,stdFilter] = ThresholdingAlgo(y,lag,threshold,influence,T);
+      [signals,avg,stdFilter] = ThresholdingAlgo(y,lag,threshold,influence,T); % function can be found in the repository
 
  signals=signals';
  OnOffSignals(T,:)=signals(1,:);  %Save signals result in a matrix
@@ -245,34 +256,34 @@ for  T=1:length(TraceNumberDepo)
  avg=avg';
  AvgDev(T,:)=avg(1,:);
  
- [pks,locs,widths,proms]=findpeaks(StdDev(T,:),'MinPeakHeight',0,'MinPeakDistance',250,'MinPeakProminence',0.0009,'Annotate','extents');
-      maxpeaks{1,T}=locs;
-      maxvalue{1,T}=pks;
-      amplitude{1,T}=proms;
+ [pks,locs,widths,proms]=findpeaks(StdDev(T,:),'MinPeakHeight',0,'MinPeakDistance',250,'MinPeakProminence',0.0009,'Annotate','extents'); %this function is a matlab build in function
+      maxpeaks{1,T}=locs; %save the index (time) peaks found
+      maxvalue{1,T}=pks; %save the potential value of each peak
+      amplitude{1,T}=proms; %save the amplitude of each peak
       
  %[pks,locs,widths,proms]=findpeaks(TracePoints(T,:),'MinPeakHeight',0,'MinPeakDistance',200,'MinPeakProminence',0.005,'Annotate','extents');
  %   MaxPeaksFoundOnRealTrace{1,T}=locs;
  
  
-    if isempty(maxpeaks{1,T})
+    if isempty(maxpeaks{1,T}) %If there is no action potential
          onsets{1,T}=[];
          offsets{1,T}=[];
     end
    
      
-      for k=1:length(maxpeaks{1,T})  
+      for k=1:length(maxpeaks{1,T})  % following analysis take each peak separatly to find the onset of peak from the max of peak
       IndexOnsets= maxpeaks{1,T}(k);
-     while StdDev(T,IndexOnsets) > mean(StdDev(T,IndexOnsets-(1:10)))
+     while StdDev(T,IndexOnsets) > mean(StdDev(T,IndexOnsets-(1:10))) % from the peak of the AP check previous time frame until std of the trace is inferior of the rolling mean
          IndexOnsets=IndexOnsets-1;
      end 
-     while TracePoints(T,IndexOnsets)< mean(TracePoints(T,IndexOnsets+(1:5))) && IndexOnsets < 10
+     while TracePoints(T,IndexOnsets)< mean(TracePoints(T,IndexOnsets+(1:5))) && IndexOnsets < 10 % once this index is found check when the actual potential at the time frame is inferior the the rolling mean on 5 frame
            IndexOnsets=IndexOnsets+1;
       end 
-     onsets{1,T}(k) = IndexOnsets;
+     onsets{1,T}(k) = IndexOnsets; %onsets of each peak is saved here
      end 
       
-     for j=1:length(maxpeaks{1,T})
-         if maxpeaks{1,T}(j) < 49500
+     for j=1:length(maxpeaks{1,T}) %check for offsets
+         if maxpeaks{1,T}(j) < 49500 %to avoid peak to late in the trace that will not have an actual offset
      IndexOffsets= maxpeaks{1,T}(j)+150; %to avoid the double peak 
       while StdDev(T,IndexOffsets) > mean(StdDev(T,IndexOffsets+(1:10))) && IndexOffsets < 49790
      IndexOffsets=IndexOffsets+1;
@@ -282,7 +293,7 @@ for  T=1:length(TraceNumberDepo)
       end 
        offsets{1,T}(j) = IndexOffsets;
          else
-             offsets{1,T}(j)=maxpeaks{1,T}(j);
+             offsets{1,T}(j)=maxpeaks{1,T}(j); % if the max peak is too late in the trace we keep the max as the offset, this AP won't be taken into consideration
          end 
      end 
    
@@ -291,22 +302,22 @@ for  T=1:length(TraceNumberDepo)
      for ds=1:length(maxpeaks{1,T})
         windowtoFindMP=[];
         if maxpeaks{1,T}(ds) < 49500
-        windowtoFindMP=[maxpeaks{1,T}(ds):maxpeaks{1,T}(ds)+100];
+        windowtoFindMP=[maxpeaks{1,T}(ds):maxpeaks{1,T}(ds)+100]; % take a segment of the trace from the maxpeak,found by findpeak function, to +100 of this value
         [CMV,CMI]=max(TracePoints(T,windowtoFindMP)); %Max value and its indice
         CorrectedMaxValue{1,T}(ds)=CMV;
         CorrectedMaxpeakIndice{1,T}(ds)=maxpeaks{1,T}(ds)+(CMI-1); % changed with the CMI-1 use to be just CMI
         else 
-         CorrectedMaxValue{1,T}(ds)=TracePoints(T,maxpeaks{1,T}(ds));
-         CorrectedMaxpeakIndice{1,T}(ds)=maxpeaks{1,T}(ds);
+         CorrectedMaxValue{1,T}(ds)=TracePoints(T,maxpeaks{1,T}(ds)); %potential value
+         CorrectedMaxpeakIndice{1,T}(ds)=maxpeaks{1,T}(ds); %time frame
         end 
     end 
  
 
-if ~isempty(onsets{1,T}); 
+if ~isempty(onsets{1,T}); %if an onset has been found, use the onset, max and offset of each AP to extract timing properties
     
     for l=1:length(CorrectedMaxpeakIndice{1,T})
     RiseTime{1,T}(l) = ((CorrectedMaxpeakIndice{1,T}(l)) - (onsets{1,T}(l)))/50; %in ms
-    if RiseTime{1,T}(l)<0 | RiseTime{1,T}(l)>5 % to remove aberant RT hence all the rest variables
+    if RiseTime{1,T}(l)<0 | RiseTime{1,T}(l)>5 % to remove aberant RT hence all the rest variables are left empty
        RiseTimes{1,T}(l)=NaN;
        APTotalTime{1,T}(l)=NaN; 
        AmpRT{1,T}(l)=NaN;
@@ -314,7 +325,7 @@ if ~isempty(onsets{1,T});
        SpeedRT{1,T}(l)=NaN;
        SpeedDT{1,T}(l)=NaN;
     else   
-    DecayTime{1,T}(l) = (offsets{1,T}(l)- CorrectedMaxpeakIndice{1,T}(l))/50;
+    DecayTime{1,T}(l) = (offsets{1,T}(l)- CorrectedMaxpeakIndice{1,T}(l))/50; 
     APTotalTime{1,T}(l)= RiseTime{1,T}(l)+DecayTime{1,T}(l);
     AmpRT{1,T}(l) = (abs(TracePoints(T,onsets{1,T}(l))-TracePoints(T,CorrectedMaxpeakIndice{1,T}(l))))*1000;
     AmpDT{1,T}(l) = (abs(TracePoints(T,offsets{1,T}(l))-TracePoints(T,CorrectedMaxpeakIndice{1,T}(l))))*1000;
@@ -323,14 +334,14 @@ if ~isempty(onsets{1,T});
     end
     
    
-    %Find the halfwidth time
+    %Find the halfwidth time of the AP
     
 if ~isnan(AmpRT{1,T}(l))
         HalfAmpValue{1,T}(l)= TracePoints(T,onsets{1,T}(l)) + ((AmpRT{1,T}(l)))/2000;
         %HalfAmpValueDrugs{1,T}(l)=((AmpRTDrugs{1,T}(l)))/2000;
         windowtofindminonset =[];
-        windowtofindminonset=[onsets{1,T}(l):CorrectedMaxpeakIndice{1,T}(l)];
-        windowsizeonset=size(windowtofindminonset);
+        windowtofindminonset=[onsets{1,T}(l):CorrectedMaxpeakIndice{1,T}(l)]; %timeframe segment to find the halfwidth
+        windowsizeonset=size(windowtofindminonset); 
         Diffonset=[];
         for counter=1:windowsizeonset(2)
           %Diffonset(counter)=abs(abs(TracePoints(T,windowtofindminonset(counter)))-((HalfAmpValue{1,T}(l))));
@@ -339,7 +350,7 @@ if ~isnan(AmpRT{1,T}(l))
         end 
           [MinvalueOnset,IndexHalfAmponset]=min(Diffonset);
           IndexHalfAmpOnset=(IndexHalfAmponset-1)+onsets{1,T}(l);
-          IndexHalfAmpOnsetReal{1,T}(l)=IndexHalfAmpOnset;
+          IndexHalfAmpOnsetReal{1,T}(l)=IndexHalfAmpOnset; % found the half amp at the rise period of the AP 
           
         windowtofindminoffset =[];
         windowtofindminoffset=[CorrectedMaxpeakIndice{1,T}(l):offsets{1,T}(l)];
@@ -350,7 +361,7 @@ if ~isnan(AmpRT{1,T}(l))
         end 
           [MinvalueOffset,IndexHalfAmpoffset]=min(Diffoffset);
           IndexHalfAmpOffset=(IndexHalfAmpoffset-1)+CorrectedMaxpeakIndice{1,T}(l);
-          IndexHalfAmpOffsetReal{1,T}(l)=IndexHalfAmpOffset;
+          IndexHalfAmpOffsetReal{1,T}(l)=IndexHalfAmpOffset; % found the half amp at the decay period of the AP
           
           HalfWidthTime{1,T}(l)=((IndexHalfAmpOffsetReal{1,T}(l))-(IndexHalfAmpOnsetReal{1,T}(l)))/50;
     else 
@@ -360,7 +371,7 @@ if ~isnan(AmpRT{1,T}(l))
      
     
     
-    % Find offset as y=onsets
+    % Find offset as y=onsets, other wise the offset is usually after the AHP
     
     
      %TracePoints(T,onsets{1,T}(l))
@@ -409,7 +420,7 @@ end
  
 for  T=1:length(CorrectedMaxpeakIndice)
 
-for l=1:length(CorrectedMaxpeakIndice{1,T})
+for l=1:length(CorrectedMaxpeakIndice{1,T}) %Take each AP as the corrected max peak
 
 
     windowtofindshortoffset=[];
@@ -444,7 +455,7 @@ end
 
 end 
 
-
+% the mean of each timing parameter is the the mean of each AP timing parameter at each current step
 MeanAmpAHP=nanmean(cell2mat(AmpAHP));
 MeanTimeAHP=nanmean(cell2mat(TimeAHP));
 MeanSpeedAHP=nanmean(cell2mat(SpeedAHP));
@@ -463,7 +474,7 @@ MeanHalfWidthTime=nanmean(cell2mat(HalfWidthTime));
 %% Rheobase 
 
    rd=1;
-   SizeParameters=size(ParametersofPeaks);
+   SizeParameters=size(ParametersofPeaks); % from the IgorToMatlabCCstepdepo function
    IndexColumn=3;
      idxnon0 = find(ParametersofPeaks ~= 0, 1); 
  ParametersofPeaksDepo=ParametersofPeaks(idxnon0:end,:);
@@ -480,7 +491,7 @@ Rheobase=mean(nonzeros(Rheobaseformean))
   save('Rheobase','Rheobase')
 end
    
-%%
+%% Plot the hyperpolarizing traces at -20pA
 
   np=0;
 for  T=1:length(ClampedCurrent)
@@ -495,6 +506,7 @@ for  T=1:length(ClampedCurrent)
   end
 end 
 
+%Check depolarizing steps at +25pA to extract same parameters as in -20pA steps
 
 if exist('Depo25pA')
    NS= size(Depo25pA);
@@ -556,7 +568,7 @@ end
  savefig(figure(5),'Fig Exp Fit at 25pA')
    end 
 
-    %% ISI
+    %% Inter-Spike Intervals
  
      % Define the range and step size
 startValue = 0;
