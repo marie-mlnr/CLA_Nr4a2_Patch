@@ -1,11 +1,14 @@
+%this function takes each trace of igor files (.ibw) and export it in matlab files. CH4 contains the trace of the cell CH10 contains the input given to the cell (aka the current given) 
+% Assign trace in different group according to the current it's clamped at
+
    filename=['exp_CCstepDepo_ch10_',num2str(trace),'.ibw'];
-   D = IBWread(filename);
+   D = IBWread(filename); %function to read ibw files
    AllTracesCH10(trace,:)=(D.y)';
-   ClampedCurrent(trace,1)=((mean(AllTracesCH10(trace,20000:50000)))-(mean(AllTracesCH10(trace,1:9990))))*10^12; % to have it in pA
+   ClampedCurrent(trace,1)=((mean(AllTracesCH10(trace,20000:50000)))-(mean(AllTracesCH10(trace,1:9990))))*10^12; % to have it in pA, check at which current the trace is clamped
    filename=['exp_CCstepDepo_ch4_',num2str(trace),'.ibw'];
    D = IBWread(filename);
    FullTraceCH4(trace,:)=(D.y)';
-   AllTracesCH4(trace,:)=(D.y(10000:60000))'; %only taking the rec from 0.2 to 1.2 sec 
+   AllTracesCH4(trace,:)=(D.y(10000:60000))'; %only taking the rec from 0.2 to 1.2 sec, the part of the recording where the cell is receiving a current
    [pks,locs,widths,proms]=findpeaks(AllTracesCH4(trace,:),'MinPeakHeight',MinPeakHeight,'MinPeakDistance',200,'MinPeakProminence',0.005,'Annotate','extents');
    nbrAP(trace,:)=[trace,ClampedCurrent(trace,1),length(pks)];
    %locationAP(trace,:)= (locs);
@@ -21,12 +24,12 @@
        %plot(HyperpoMinus20pA(nm,:))
    end
    
-              if nbrAP(trace,2)<2 
+              if nbrAP(trace,2)<2 %Chech if the current injected is below 2pA
               il=il+1;
-              APat0pA(il,:)=nbrAP(trace,3);
-              else if nbrAP(trace,2)<30 && nbrAP(trace,2)>15
+              APat0pA(il,:)=nbrAP(trace,3);  % and assign the trace to the 0pA step
+              else if nbrAP(trace,2)<30 && nbrAP(trace,2)>15 % check if current injected is between 15 to 30 
               ij=ij+1;
-              APat25pA(ij,:)=nbrAP(trace,3);
+              APat25pA(ij,:)=nbrAP(trace,3);  %and assign the trace to the 25pA step
               else if nbrAP(trace,2)<60 && nbrAP(trace,2)>30
               ik=ik+1;
               APat50pA(ik,:)=nbrAP(trace,3);
