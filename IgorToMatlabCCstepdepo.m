@@ -2,7 +2,7 @@
 % Assign trace in different group according to the current it's clamped at
 
    filename=['exp_CCstepDepo_ch10_',num2str(trace),'.ibw'];
-   D = IBWread(filename); %function to read ibw files
+   D = IBWread(filename); %function to read ibw files found here: Jakub Bialek (2025). Igor Pro file format (ibw) to matlab variable (https://www.mathworks.com/matlabcentral/fileexchange/42679-igor-pro-file-format-ibw-to-matlab-variable), MATLAB Central File Exchange.
    AllTracesCH10(trace,:)=(D.y)';
    ClampedCurrent(trace,1)=((mean(AllTracesCH10(trace,20000:50000)))-(mean(AllTracesCH10(trace,1:9990))))*10^12; % to have it in pA, check at which current the trace is clamped
    filename=['exp_CCstepDepo_ch4_',num2str(trace),'.ibw'];
