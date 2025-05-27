@@ -1,6 +1,6 @@
-Folliwing scripts are custom made for Matlab. 
+Following scripts are custom made for Matlab and are made to extract data from patch clamp experiment traces acquired with Igor.
 Patch clamp experiment acquire with Igor give .ibw files.
-With the following scrip we use the function IBWRead to get .mat files from it
+With the following script we use the function IBWRead to convert .ibw files to .mat files 
 
 Each trace is a separate file within its cell folder. 
 
